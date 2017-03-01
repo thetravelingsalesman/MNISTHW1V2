@@ -42,31 +42,15 @@ if args.cuda:
 
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
-#train_loader = torch.utils.data.DataLoader(
-#     datasets.MNIST('../data', train=True, download=True,
-#                    transform=transforms.Compose([
-#                        transforms.ToTensor(),
-#                        transforms.Normalize((0.1307,), (0.3081,))
-#                    ])),
-#     batch_size=args.batch_size, shuffle=True, **kwargs)
-
 print('loading data!')
-path = '../data/'
+path = '../../data/'
 trainset_labeled = pickle.load(open(path + "train_labeled.p", "rb"))
 validset = pickle.load(open(path + "validation.p", "rb"))
 trainset_unlabeled = pickle.load(open(path + "train_unlabeled.p", "rb"))
-#
+
 train_loader = torch.utils.data.DataLoader(trainset_labeled, batch_size=32, shuffle=True, **kwargs)
 valid_loader = torch.utils.data.DataLoader(validset, batch_size=64, shuffle=True)
 train_unlabeled_loader = torch.utils.data.DataLoader(trainset_unlabeled, batch_size=256, shuffle=False, **kwargs)
-
-# test_loader = torch.utils.data.DataLoader(
-#     datasets.MNIST('../data', train=False, transform=transforms.Compose([
-#                        transforms.ToTensor(),
-#                        transforms.Normalize((0.1307,), (0.3081,))
-#                    ])),
-#     batch_size=args.batch_size, shuffle=True, **kwargs)
-
 
 def weightingFunction(epoch,T1 = 100.0,T2 = 300.0,alpha = 3./12):
     """
@@ -217,7 +201,7 @@ def plot_accuracy(epochs, accuracy_test, accuracy_train):
     plt.ylabel('Accuracy')
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.12),
                fancybox=True, shadow=True, ncol=5)
-    plt.savefig('accuracy')
+    plt.savefig('../plots/accuracy')
     plt.show()
 
 def plot_accuracy_zoomin(epochs, accuracy_test, accuracy_train):
@@ -229,7 +213,7 @@ def plot_accuracy_zoomin(epochs, accuracy_test, accuracy_train):
     plt.ylim((90,100))
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.12),
                fancybox=True, shadow=True, ncol=5)
-    plt.savefig('accuracy_zoomin')
+    plt.savefig('../plots/accuracy_zoomin')
     plt.show() 
     
 plot_accuracy(range(1, args.epochs + 1), valid_accuracy, train_accuracy)
