@@ -44,17 +44,19 @@ kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 print('loading data!')
 path = '../../data/'
-#trainset_labeled = pickle.load(open(path + "train_labeled.p", "rb"))
-#validset = pickle.load(open(path + "validation.p", "rb"))
-#trainset_unlabeled = pickle.load(open(path + "train_unlabeled.p", "rb"))
+trainset_labeled = pickle.load(open(path + "trainset_new.p", "rb"))
+validset = pickle.load(open(path + "validation.p", "rb"))
+trainset_unlabeled = pickle.load(open(path + "train_unlabeled.p", "rb"))
+##add fake labels (-1) to the unlabeled data 
+#trainset_unlabeled.train_labels = torch.ones(trainset_unlabeled.k)*(-1) 
 #
-#train_loader = torch.utils.data.DataLoader(trainset_labeled, batch_size=32, shuffle=True, **kwargs)
-#valid_loader = torch.utils.data.DataLoader(validset, batch_size=64, shuffle=True)
-#train_unlabeled_loader = torch.utils.data.DataLoader(trainset_unlabeled, batch_size=256, shuffle=False, **kwargs)
-
-def weightingFunction(epoch,T1 = 100.0,T2 = 300.0,alpha = 3./12):
+train_loader = torch.utils.data.DataLoader(trainset_labeled, batch_size=32, shuffle=True, **kwargs)
+valid_loader = torch.utils.data.DataLoader(validset, batch_size=64, shuffle=True)
+train_unlabeled_loader = torch.utils.data.DataLoader(trainset_unlabeled, batch_size=256, shuffle=False, **kwargs)
+ 
+def weightingFunction(epoch,T1 = 10.0,T2 = 300.0,alpha = 3./12):
     """
-    values from paper: T1 =100, T2 = 300, alpha =3 
+    values from paper: T1 = 100, T2 = 300, alpha = 3 
     
     """
     if epoch < T1:
@@ -108,8 +110,8 @@ def train_unlabeled(epoch):
         optimizer.zero_grad()
         output = model(data)
         
-        target = output.data.max(1)[1]
-#        target = target.view(target.size()[0]) #make 1d array
+        target = output.data.max(1)[1] 
+        target = target.view(target.size()[0]) #make 1d array
 #        
 #        target_np = target.numpy().astype(int)
 #        # finds the most likely lable for unlabeled image and its transformations
@@ -122,7 +124,7 @@ def train_unlabeled(epoch):
 #        
 #        target = torch.from_numpy(np.array(labels, dtype = int))
         
-#        target = Variable(target)
+        target = Variable(target)
         loss = weightingFunction(epoch)*F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
@@ -182,7 +184,7 @@ valid_accuracy = []
 num_same_unlabeled = 4
     
 #for testing
-args.epochs = 10
+args.epochs = 20
 args.momentum = 0.95
 args.lr = 0.003
 
