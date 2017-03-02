@@ -43,6 +43,7 @@ if args.cuda:
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 print('loading data!')
+<<<<<<< HEAD
 path = '../data/'
 trainset_labeled = pickle.load(open(path + "trainset_new_rotations_10X.p", "rb"))
 validset = pickle.load(open(path + "validation.p", "rb"))
@@ -57,6 +58,22 @@ def weightingFunction(epoch,T1 = 50,T2 = 150,alpha = 3./13.):
     """
     values from paper: T1 =100, T2 = 300, alpha =3 
     note alpha should be divided by ratio 13x if create augmented labeled
+=======
+path = '../../data/'
+trainset_labeled = pickle.load(open(path + "trainset_new.p", "rb"))
+validset = pickle.load(open(path + "validation.p", "rb"))
+trainset_unlabeled = pickle.load(open(path + "train_unlabeled.p", "rb"))
+##add fake labels (-1) to the unlabeled data 
+#trainset_unlabeled.train_labels = torch.ones(trainset_unlabeled.k)*(-1) 
+#
+train_loader = torch.utils.data.DataLoader(trainset_labeled, batch_size=32, shuffle=True, **kwargs)
+valid_loader = torch.utils.data.DataLoader(validset, batch_size=64, shuffle=True)
+train_unlabeled_loader = torch.utils.data.DataLoader(trainset_unlabeled, batch_size=256, shuffle=False, **kwargs)
+ 
+def weightingFunction(epoch,T1 = 10.0,T2 = 300.0,alpha = 3./12):
+    """
+    values from paper: T1 = 100, T2 = 300, alpha = 3 
+>>>>>>> 01dd1a4287c5c8931f232b249a4ffb84ea20c369
     
     """
     if epoch < T1:
@@ -149,7 +166,11 @@ def train_unlabeled(epoch):
         optimizer.zero_grad()
         output = model(data)
         
+<<<<<<< HEAD
         target = output.data.max(1)[1]
+=======
+        target = output.data.max(1)[1] 
+>>>>>>> 01dd1a4287c5c8931f232b249a4ffb84ea20c369
         target = target.view(target.size()[0]) #make 1d array
 #        
 #        target_np = target.numpy().astype(int)
@@ -210,6 +231,26 @@ def test(epoch, valid_loader, accuracy_list, name):
         100. * correct / len(valid_loader.dataset)))
     accuracy_list.append(100. * correct / len(valid_loader.dataset))
 
+<<<<<<< HEAD
+=======
+model = Net()
+if args.cuda:
+    model.cuda()
+
+optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+print ('args.lr', args.lr)
+
+train_accuracy = []
+valid_accuracy = []
+
+num_same_unlabeled = 4
+    
+#for testing
+args.epochs = 20
+args.momentum = 0.95
+args.lr = 0.003
+
+>>>>>>> 01dd1a4287c5c8931f232b249a4ffb84ea20c369
 for epoch in range(1, args.epochs + 1):
     train(epoch)
     print ('done with labeled')
