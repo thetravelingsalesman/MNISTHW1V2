@@ -43,18 +43,20 @@ if args.cuda:
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 print('loading data!')
-path = '../../data/'
-#trainset_labeled = pickle.load(open(path + "train_labeled.p", "rb"))
-#validset = pickle.load(open(path + "validation.p", "rb"))
-#trainset_unlabeled = pickle.load(open(path + "train_unlabeled.p", "rb"))
-#
-#train_loader = torch.utils.data.DataLoader(trainset_labeled, batch_size=32, shuffle=True, **kwargs)
-#valid_loader = torch.utils.data.DataLoader(validset, batch_size=64, shuffle=True)
+path = '../data/'
+trainset_labeled = pickle.load(open(path + "trainset_new_rotations_10X.p", "rb"))
+validset = pickle.load(open(path + "validation.p", "rb"))
+# trainset_unlabeled = pickle.load(open(path + "train_unlabeled.p", "rb"))
+# trainset_unlabeled.train_labels = torch.ones(trainset_unlabeled.k)*(-1)  # Unlabeled!!
+
+train_loader = torch.utils.data.DataLoader(trainset_labeled, batch_size=32, shuffle=True, **kwargs)
+valid_loader = torch.utils.data.DataLoader(validset, batch_size=64, shuffle=True)
 #train_unlabeled_loader = torch.utils.data.DataLoader(trainset_unlabeled, batch_size=256, shuffle=False, **kwargs)
 
-def weightingFunction(epoch,T1 = 100.0,T2 = 300.0,alpha = 3./12):
+def weightingFunction(epoch,T1 = 50,T2 = 150,alpha = 3./13.):
     """
     values from paper: T1 =100, T2 = 300, alpha =3 
+    note alpha should be divided by ratio 13x if create augmented labeled
     
     """
     if epoch < T1:
@@ -65,33 +67,72 @@ def weightingFunction(epoch,T1 = 100.0,T2 = 300.0,alpha = 3./12):
         return alpha
     
 class Net(nn.Module):
+#     def __init__(self):
+#         super(Net, self).__init__()
+#         self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=2)
+#         self.conv2 = nn.Conv2d(8, 16, kernel_size=3, padding=2)
+#         self.conv2_drop = nn.Dropout2d()
+#         self.fc1 = nn.Linear(1024, 512)
+#         self.fc2 = nn.Linear(512, 256)
+#         self.fc3 = nn.Linear(256, 128)
+#         self.fc4 = nn.Linear(128, 64)
+#         self.fc5 = nn.Linear(64, 10)
+
+#     def forward(self, x):
+#         x = F.relu(F.max_pool2d(self.conv1(x), 2))
+#         x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+# #        print ('x', x.size())
+#         x = x.view(-1, 1024)
+#         x = F.relu(self.fc1(x))
+#         x = F.dropout(x, training=self.training)
+#         x = F.relu(self.fc2(x))
+#         x = F.dropout(x, training=self.training)
+#         x = F.relu(self.fc3(x))
+#         x = F.dropout(x, training=self.training)
+#         x = F.relu(self.fc4(x))
+#         x = F.dropout(x, training=self.training)
+#         x = F.relu(self.fc5(x))
+#         return F.log_softmax(x)
+
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=2)
-        self.conv2 = nn.Conv2d(8, 16, kernel_size=3, padding=2)
+        self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
+        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
         self.conv2_drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 128)
-        self.fc4 = nn.Linear(128, 64)
-        self.fc5 = nn.Linear(64, 10)
+        self.fc1 = nn.Linear(320, 160)
+        self.fc2 = nn.Linear(160, 80)
+
+        self.fc3 = nn.Linear(80, 10)
+
 
     def forward(self, x):
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
         x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-#        print ('x', x.size())
-        x = x.view(-1, 1024)
+        x = x.view(-1, 320)
         x = F.relu(self.fc1(x))
         x = F.dropout(x, training=self.training)
         x = F.relu(self.fc2(x))
         x = F.dropout(x, training=self.training)
         x = F.relu(self.fc3(x))
-        x = F.dropout(x, training=self.training)
-        x = F.relu(self.fc4(x))
-        x = F.dropout(x, training=self.training)
-        x = F.relu(self.fc5(x))
         return F.log_softmax(x)
 
+
+model = Net()
+if args.cuda:
+    model.cuda()
+
+args.epochs = 50
+args.momentum = 0.95
+args.lr = 0.003
+
+optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+print ('args.lr', args.lr)
+
+train_accuracy = []
+valid_accuracy = []
+
+num_same_unlabeled = 4
+    
 
 def train_unlabeled(epoch):
     model.train()
@@ -109,7 +150,7 @@ def train_unlabeled(epoch):
         output = model(data)
         
         target = output.data.max(1)[1]
-#        target = target.view(target.size()[0]) #make 1d array
+        target = target.view(target.size()[0]) #make 1d array
 #        
 #        target_np = target.numpy().astype(int)
 #        # finds the most likely lable for unlabeled image and its transformations
@@ -122,7 +163,7 @@ def train_unlabeled(epoch):
 #        
 #        target = torch.from_numpy(np.array(labels, dtype = int))
         
-#        target = Variable(target)
+        target = Variable(target)
         loss = weightingFunction(epoch)*F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
@@ -169,27 +210,10 @@ def test(epoch, valid_loader, accuracy_list, name):
         100. * correct / len(valid_loader.dataset)))
     accuracy_list.append(100. * correct / len(valid_loader.dataset))
 
-model = Net()
-if args.cuda:
-    model.cuda()
-
-optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
-print ('args.lr', args.lr)
-
-train_accuracy = []
-valid_accuracy = []
-
-num_same_unlabeled = 4
-    
-#for testing
-args.epochs = 10
-args.momentum = 0.95
-args.lr = 0.003
-
 for epoch in range(1, args.epochs + 1):
     train(epoch)
     print ('done with labeled')
-    train_unlabeled(epoch)
+    #train_unlabeled(epoch)
     test(epoch, valid_loader, valid_accuracy, "Validation")
     test(epoch, train_loader, train_accuracy, "Train")
 
@@ -207,7 +231,7 @@ def plot_accuracy(epochs, accuracy_test, accuracy_train, file_name):
 def plot_accuracy_zoomin(epochs, accuracy_test, accuracy_train, file_name):
     plt.plot(epochs, accuracy_test, label = 'Validation')
     plt.plot(epochs, accuracy_train, label = 'Train')
-    plt.title("Validation and Train accuracy")
+    plt.title("Validation and Train accuracy Rotation")
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     plt.ylim((90,100))
@@ -216,8 +240,8 @@ def plot_accuracy_zoomin(epochs, accuracy_test, accuracy_train, file_name):
     plt.savefig('../plots/' + file_name, bbox_inches='tight')
     plt.show() 
     
-plot_accuracy(range(1, args.epochs + 1), valid_accuracy, train_accuracy, 'acc')
-plot_accuracy_zoomin(range(1, args.epochs + 1), valid_accuracy, train_accuracy, 'acc_zomm')
+plot_accuracy(range(1, args.epochs + 1), valid_accuracy, train_accuracy, 'trainset_new_rotation_size_11X')
+plot_accuracy_zoomin(range(1, args.epochs + 1), valid_accuracy, train_accuracy, 'trainset_new_rotation_size_11X')
 
 
 # Code to generate a file for submission

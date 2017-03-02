@@ -50,17 +50,17 @@ kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 print('loading data!')
 path = '../data/'
-#trainset_labeled = pickle.load(open(path + "train_labeled.p", "rb"))
+trainset_labeled = pickle.load(open(path + "trainset_new_elastic_size_11X.p", "rb"))
 
 #augmented data
 #trainset_labeled = pickle.load(open(path + "trainset_new.p", "rb"))
 ##
-#validset = pickle.load(open(path + "validation.p", "rb"))
+validset = pickle.load(open(path + "validation.p", "rb"))
 ##trainset_unlabeled = pickle.load(open(path + "train_unlabeled.p", "rb"))
 ##print('done')
 ##
-#train_loader = torch.utils.data.DataLoader(trainset_labeled, batch_size=64, shuffle=True, **kwargs)
-#valid_loader = torch.utils.data.DataLoader(validset, batch_size=64, shuffle=True)
+train_loader = torch.utils.data.DataLoader(trainset_labeled, batch_size=64, shuffle=True, **kwargs)
+valid_loader = torch.utils.data.DataLoader(validset, batch_size=64, shuffle=True)
 #unlabeled_loader = torch.utils.data.DataLoader(trainset_unlabeled, batch_size=64, shuffle=True)
 
 # test_loader = torch.utils.data.DataLoader(
